@@ -1,0 +1,35 @@
+name: Publish release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  publish:
+
+    runs-on: linux-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 6.x
+      
+    - name: Publish
+      run: dotnet publish ./src --configuration Release -o ./app
+
+    - name: Compress build output
+      shell: pwsh
+      run: Compress-Archive -Path ./app/* -DestinationPath ./app.zip -CompressionLevel Optimal
+
+    - name: Upload binaries to release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: ./app.zip
+        tag: ${{ github.ref }}
+        asset_name: nerdcast-filtered.$tag.zip
