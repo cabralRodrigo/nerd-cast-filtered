@@ -1,0 +1,11 @@
+﻿@model List<(Uri, string)>
+
+Available feeds:
+<ul>
+    @foreach (var (url, name) in Model)
+    {
+        <li>
+            <a href="@url">@name</a>
+        </li>
+    }
+</ul>
