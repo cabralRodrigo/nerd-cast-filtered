@@ -3,6 +3,7 @@ using JovemNerd.Rss.Filter.Services;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -14,13 +15,15 @@ public class FeedController : Controller
     private readonly INerdcastFilter nerdcastFilter;
     private readonly INerdcastKindCache nerdcastKindCache;
     private readonly IFeedSerializer feeSerializer;
+    private readonly IAccessLogRepository accessLogRepository;
 
-    public FeedController(IOriginalFeedService originalFeedService, INerdcastFilter nerdcastFilter, INerdcastKindCache nerdcastKindCache, IFeedSerializer feeSerializer)
+    public FeedController(IOriginalFeedService originalFeedService, INerdcastFilter nerdcastFilter, INerdcastKindCache nerdcastKindCache, IFeedSerializer feeSerializer, IAccessLogRepository accessLogRepository)
     {
         this.originalFeedService = originalFeedService ?? throw new ArgumentNullException(nameof(originalFeedService));
         this.nerdcastFilter = nerdcastFilter ?? throw new ArgumentNullException(nameof(nerdcastFilter));
         this.nerdcastKindCache = nerdcastKindCache ?? throw new ArgumentNullException(nameof(nerdcastKindCache));
         this.feeSerializer = feeSerializer ?? throw new ArgumentNullException(nameof(feeSerializer));
+        this.accessLogRepository = accessLogRepository ?? throw new ArgumentNullException(nameof(accessLogRepository));
     }
 
     [Route("/")]
@@ -43,7 +46,10 @@ public class FeedController : Controller
         if (!Enum.IsDefined(kind))
             return this.BadRequest();
 
+        var time = Stopwatch.StartNew();
         var feed = await this.originalFeedService.LoadOriginalFeed();
+        time.Stop();
+
         var episodes = this.nerdcastFilter.FilterEpisodes(feed.Podcast.Episodes, kind);
 
         feed.Podcast.Title += $" ({this.nerdcastKindCache.GetKinds()[kind]})";
@@ -51,6 +57,8 @@ public class FeedController : Controller
 
         var xml = this.feeSerializer.Serialize(feed);
         var bytes = Encoding.UTF8.GetBytes(xml);
+
+        await this.accessLogRepository.Log(kind, this.Request.Headers.UserAgent, (int)time.ElapsedMilliseconds);
 
         return new FileContentResult(bytes, "application/rss+xml; charset=utf-8");
     }

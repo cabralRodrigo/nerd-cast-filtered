@@ -19,6 +19,7 @@ public static class App
         builder.Services.AddSingleton<INerdcastKindCache, NerdcastKindCache>();
         builder.Services.AddSingleton<INerdcastTitleParser, NerdcastTitleParser>();
         builder.Services.AddSingleton<INerdcastFilter, NerdcastFilter>();
+        builder.Services.AddSingleton<IAccessLogRepository, AccessLogRepository>();
 
         var app = builder.Build();
 
